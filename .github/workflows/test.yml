@@ -66,7 +66,7 @@ jobs:
       - name: Check if project has tests
         id: check-tests
         run: |
-          if [ -f "projects/${{ matrix.project }}/test_*.py" ] || [ -d "projects/${{ matrix.project }}/tests" ]; then
+          if [ -d "projects/${{ matrix.project }}/tests" ] || find "projects/${{ matrix.project }}" -maxdepth 1 -name "test_*.py" | grep -q .; then
             echo "has_tests=true" >> $GITHUB_OUTPUT
           else
             echo "has_tests=false" >> $GITHUB_OUTPUT
