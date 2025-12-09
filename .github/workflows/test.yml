@@ -1,0 +1,83 @@
+name: Test Projects
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint with Ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run ruff check
+        run: ruff check .
+
+      - name: Run ruff format check
+        run: ruff format --check .
+
+  test-projects:
+    name: Test Projects
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project:
+          - elegoo-saturn-4-ultra-fresnel-lens
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check if project has requirements
+        id: check-requirements
+        run: |
+          if [ -f "projects/${{ matrix.project }}/requirements.txt" ]; then
+            echo "has_requirements=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_requirements=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        if: steps.check-requirements.outputs.has_requirements == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r projects/${{ matrix.project }}/requirements.txt
+
+      - name: Check if project has tests
+        id: check-tests
+        run: |
+          if [ -d "projects/${{ matrix.project }}/tests" ] || find "projects/${{ matrix.project }}" -maxdepth 1 -name "test_*.py" | grep -q .; then
+            echo "has_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_tests=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install pytest
+        if: steps.check-tests.outputs.has_tests == 'true'
+        run: pip install pytest
+
+      - name: Run tests
+        if: steps.check-tests.outputs.has_tests == 'true'
+        run: |
+          cd projects/${{ matrix.project }}
+          pytest
